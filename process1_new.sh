@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH -t 5-16
+#SBATCH -t 10-16
 #SBATCH --mem=32G
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=xwang234@fhcrc.org
@@ -89,18 +89,22 @@ echo $step
 echo ${SCRATCH_LOCAL}
 
 fixfastqscore=1 #illumina old format Phred+64
+encodefile=${fastq1/%.gz/}_fastqc/fastqc_data.txt
 if [[ $step -eq 1 ]]
 then
-  echo "run fastqc..."
-  /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/fastqc.sh $fastq1
-  /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/fastqc.sh $fastq2
-  #check encoding
-  encodefile=${fastq1/%.gz/}_fastqc/fastqc_data.txt
-  line=$(head -6 $encodefile |tail -1)
-  encode=$(echo $line | awk '{print $5}' -)
-  if [[ $encode == 1.9 || $encode == 1.8 ]] #Phred+33
+  if [[ ! -s $encodefile ]]
   then
-    fixfastqscore=0
+    echo "run fastqc..."
+    /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/fastqc.sh $fastq1
+    /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/fastqc.sh $fastq2
+    #check encoding
+    encodefile=${fastq1/%.gz/}_fastqc/fastqc_data.txt
+    line=$(head -6 $encodefile |tail -1)
+    encode=$(echo $line | awk '{print $5}' -)
+    if [[ $encode == 1.9 || $encode == 1.8 ]] #Phred+33
+    then
+      fixfastqscore=0
+    fi
   fi
 fi
 
@@ -116,18 +120,18 @@ if [[ $step -eq 1 ]];then
 	#if [[ ! -s $output_dir/${fastq_name}.sorted.bam ]]
 	#then
 		#java -Xmx16g $java_opts -jar $picard_dir/SortSam.jar INPUT=$output_dir/${fastq_name}.sam OUTPUT=$output_dir/${fastq_name}.sorted.bam SORT_ORDER=coordinate $picard_opts
-		samtools view -bhS ${SCRATCH_LOCAL}/${fastq_name}.sam | samtools sort - $output_dir/${fastq_name}.sorted
+		samtools view -bhS ${SCRATCH_LOCAL}/${fastq_name}.sam | samtools sort - ${SCRATCH_LOCAL}/${fastq_name}.sorted
 	#fi
 
 	#if [[ -s $output_dir/${fastq_name}.sorted.bam ]];then rm $output_dir/${fastq_name}.sam;fi
 fi
 
 #Do realignment on each bam files
-if [[ $step -eq 2 ]];then
+if [[ $step -eq 1 ]];then
 	echo "Mark and remove duplicates..."
-	if [ ! -s $output_dir/${fastq_name}.dedup.bam ]
+	if [ ! -s ${SCRATCH_LOCAL}/${fastq_name}.dedup.bam ]
 	then
-		java $java_opts -jar $picard_dir/MarkDuplicates.jar INPUT=$output_dir/${fastq_name}.sorted.bam OUTPUT=$output_dir/${fastq_name}.dedup.bam $picard_opts  METRICS_FILE=$output_dir/${fastq_name}.duplicate_report.txt REMOVE_DUPLICATES=true
+		java $java_opts -jar $picard_dir/MarkDuplicates.jar INPUT=${SCRATCH_LOCAL}/${fastq_name}.sorted.bam OUTPUT=${SCRATCH_LOCAL}/${fastq_name}.dedup.bam $picard_opts  METRICS_FILE=$output_dir/${fastq_name}.duplicate_report.txt REMOVE_DUPLICATES=true
 	fi
 	#if [[ -s $output_dir/${fastq_name}.sorted.bam ]];then rm $output_dir/${fastq_name}.sam;fi	
 	#if [[ -s $output_dir/${fastq_name}.dedup.bam ]];then rm $output_dir/${fastq_name}.sorted.bam; rm $output_dir/${fastq_name}.sorted.bai; fi
@@ -165,7 +169,7 @@ fi
 #Base quality score recalibration
 
 
-if [[ $step -eq 2 ]]
+if [[ $step -eq 1 ]]
 then
 	echo "Base quality score recalibration..."
 	#check encoding
@@ -182,20 +186,20 @@ then
 	then
 		if [[ $fixfastqscore == 1 ]]
 		then
-			java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T BaseRecalibrator -I $output_dir/${fastq_name}.dedup.bam -R $reference -knownSites $dbsnp -knownSites $vcf_indel_1000G  -knownSites $vcf_indel_Mills_and_100G -o $output_dir/${fastq_name}.recal.table -fixMisencodedQuals -allowPotentiallyMisencodedQuals
+			java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T BaseRecalibrator -I ${SCRATCH_LOCAL}/${fastq_name}.dedup.bam -R $reference -knownSites $dbsnp -knownSites $vcf_indel_1000G  -knownSites $vcf_indel_Mills_and_100G -o $output_dir/${fastq_name}.recal.table -fixMisencodedQuals -allowPotentiallyMisencodedQuals
 		else
-			java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T BaseRecalibrator -I $output_dir/${fastq_name}.dedup.bam -R $reference -knownSites $dbsnp -knownSites $vcf_indel_1000G  -knownSites $vcf_indel_Mills_and_100G -o $output_dir/${fastq_name}.recal.table -allowPotentiallyMisencodedQuals
+			java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T BaseRecalibrator -I ${SCRATCH_LOCAL}/${fastq_name}.dedup.bam -R $reference -knownSites $dbsnp -knownSites $vcf_indel_1000G  -knownSites $vcf_indel_Mills_and_100G -o $output_dir/${fastq_name}.recal.table -allowPotentiallyMisencodedQuals
 		fi
 	fi
 
 	if [ ! -s $output_dir/${fastq_name}.post_recal.table ]
 	then
-		java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T BaseRecalibrator -R $reference -I $output_dir/${fastq_name}.dedup.bam -knownSites $dbsnp -knownSites $vcf_indel_1000G  -knownSites $vcf_indel_Mills_and_100G -BQSR $output_dir/${fastq_name}.recal.table -o $output_dir/${fastq_name}.post_recal.table #-allowPotentiallyMisencodedQuals
+		java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T BaseRecalibrator -R $reference -I ${SCRATCH_LOCAL}/${fastq_name}.dedup.bam -knownSites $dbsnp -knownSites $vcf_indel_1000G  -knownSites $vcf_indel_Mills_and_100G -BQSR $output_dir/${fastq_name}.recal.table -o $output_dir/${fastq_name}.post_recal.table #-allowPotentiallyMisencodedQuals
 	fi
 
 	if [ ! -s $output_dir/${fastq_name}.dedup.recal.bam ]
 	then
-		java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T PrintReads -R $reference -I $output_dir/${fastq_name}.dedup.bam -BQSR $output_dir/${fastq_name}.recal.table -o $output_dir/${fastq_name}.dedup.recal.bam  --filter_bases_not_stored #-allowPotentiallyMisencodedQuals
+		java $java_opts1 -jar $gatk_dir/GenomeAnalysisTK.jar -T PrintReads -R $reference -I ${SCRATCH_LOCAL}/${fastq_name}.dedup.bam -BQSR $output_dir/${fastq_name}.recal.table -o $output_dir/${fastq_name}.dedup.recal.bam  --filter_bases_not_stored #-allowPotentiallyMisencodedQuals
 	fi
 fi
 

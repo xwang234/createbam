@@ -29,8 +29,8 @@ do
 		echo $fastq_name
 		   
 		sleep 1		
-		echo sbatch -n 1 -c 8 /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/process1_new.sh $sample $fastq_name $step
-		sbatch -n 1 -c 8 /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/process1_new.sh $sample $fastq_name $direction $step
+		echo sbatch -n 1 -c 1 /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/process1_new.sh $sample $fastq_name $step
+		sbatch -n 1 -c 1 /fh/fast/dai_j/CancerGenomics/Tools/wang/createbam/process1_new.sh $sample $fastq_name $direction $step
 #		#./process.sh $sample $folder
 	done	
 	

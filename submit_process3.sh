@@ -11,6 +11,8 @@ for id in {0..9}
 do
 	tumor=${tumors[$id]}A
 	normal=${normals[$id]}A
-	echo sbatch ./process3.sh $tumor $normal
-	sbatch ./process3.sh $tumor $normal
+	tumorbam=/fh/scratch/delete30/dai_j/henan/$tumor/$tumor.merged.dedup.bam
+	normalbam=/fh/scratch/delete30/dai_j/henan/$normal/$normal.merged.dedup.bam
+	echo sbatch ./process3.sh $tumor $normal $tumorbam $normalbam
+	sbatch ./process3.sh $tumor $normal $tumorbam $normalbam
 done
