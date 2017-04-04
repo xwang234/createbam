@@ -9,4 +9,4 @@ output=${3?"output"}
 
 msisensor=/fh/fast/dai_j/CancerGenomics/Tools/msisensor/binary/msisensor_Linux_x86_64
 
-./$msisensor msi -d /fh/fast/dai_j/CancerGenomics/Tools/msisensor/hg19.microsate.sites -n $normalbam -t $tumorbam -q 2 -b 4 -f 0.1 -o $output
+$msisensor msi -d /fh/fast/dai_j/CancerGenomics/Tools/msisensor/hg19.microsate.sites -n $normalbam -t $tumorbam -q 2 -b 4 -f 0.1 -o $output
