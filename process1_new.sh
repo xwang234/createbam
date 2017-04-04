@@ -29,7 +29,7 @@ reference=/fh/fast/dai_j/CancerGenomics/Tools/database/reference/full/ucsc.hg19.
 vcf_indel_1000G=/fh/fast/dai_j/CancerGenomics/Tools/database/vcf/1000G_phase1.indels.hg19.sorted.vcf
 vcf_indel_Mills_and_100G=/fh/fast/dai_j/CancerGenomics/Tools/database/vcf/Mills_and_1000G_gold_standard.indels.hg19.sorted.vcf
 
-source /etc/profile.d/fh_path.sh
+#source /etc/profile.d/fh_path.sh
 #module load java/jdk1.7.0_25
 module load java/jdk1.8.0_31 #for gatk3.6
 module load bwa

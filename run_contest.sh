@@ -1,6 +1,6 @@
-#!/usr/bin/evn bash
+#!/usr/bin/env bash
 
-data=henan
+data=dulak
 echo $data
 sleep 10
 if [ $data == "henan" ]
